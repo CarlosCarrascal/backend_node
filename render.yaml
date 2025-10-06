@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: jwt03-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: mysql://root:TREMnZarWItIyVAnolDkLslTaUvqmATH@maglev.proxy.rlwy.net:24349/railway
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://tu-frontend-domain.com
