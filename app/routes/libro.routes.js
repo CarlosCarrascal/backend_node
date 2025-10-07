@@ -1,6 +1,7 @@
 // app/routes/libro.routes.js
 
 import express from "express";
+import multer from "multer";
 import {
   listarLibros,
   obtenerLibro,
@@ -28,12 +29,36 @@ router.get("/:id", obtenerLibro);
  * Rutas protegidas (requieren autenticación)
  */
 
+// Middleware para manejar errores de multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: "El archivo es demasiado grande. Tamaño máximo: 5MB",
+        error: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: "Error al subir el archivo",
+      error: err.message
+    });
+  } else if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || "Error al procesar el archivo",
+    });
+  }
+  next();
+};
+
 // POST /api/libros - Crear un nuevo libro con imagen opcional (requiere autenticación)
 // El campo 'portada' es el nombre del campo del formulario para la imagen
-router.post("/", [verifyToken, upload.single("portada"), validateLibro], crearLibro);
+router.post("/", [verifyToken, upload.single("portada"), handleMulterError, validateLibro], crearLibro);
 
 // PUT /api/libros/:id - Editar un libro con opción de cambiar imagen (requiere autenticación)
-router.put("/:id", [verifyToken, upload.single("portada"), validateLibro], editarLibro);
+router.put("/:id", [verifyToken, upload.single("portada"), handleMulterError, validateLibro], editarLibro);
 
 // DELETE /api/libros/:id - Eliminar un libro (requiere rol admin)
 router.delete("/:id", [verifyToken, isAdmin], eliminarLibro);

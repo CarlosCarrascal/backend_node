@@ -86,11 +86,18 @@ export const crearLibro = async (req, res) => {
   try {
     const { titulo, anio, id_autor } = req.body;
 
+    // Log para debugging
+    console.log("📝 Creando libro:", { titulo, anio, id_autor, hasFile: !!req.file });
+
     // Validación de campos obligatorios
     if (!titulo || !anio || !id_autor) {
       // Si se subió un archivo pero hay error, eliminarlo
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkError) {
+          console.error("Error al eliminar archivo:", unlinkError);
+        }
       }
 
       return res.status(400).json({
@@ -104,7 +111,11 @@ export const crearLibro = async (req, res) => {
     if (!autor) {
       // Si se subió un archivo pero el autor no existe, eliminarlo
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkError) {
+          console.error("Error al eliminar archivo:", unlinkError);
+        }
       }
 
       return res.status(404).json({
@@ -115,6 +126,15 @@ export const crearLibro = async (req, res) => {
 
     // Obtener el nombre del archivo si se subió una imagen
     const portada = req.file ? req.file.filename : null;
+    
+    if (req.file) {
+      console.log("📷 Archivo subido:", {
+        filename: req.file.filename,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        path: req.file.path
+      });
+    }
 
     const nuevoLibro = await Libro.create({
       titulo,
@@ -134,15 +154,23 @@ export const crearLibro = async (req, res) => {
       ],
     });
 
+    console.log("✅ Libro creado exitosamente:", nuevoLibro.id_libro);
+
     res.status(201).json({
       success: true,
       data: libroCompleto,
       message: "Libro creado exitosamente",
     });
   } catch (error) {
+    console.error("❌ Error al crear libro:", error);
+    
     // Si hay error y se subió un archivo, eliminarlo
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error("Error al eliminar archivo tras error:", unlinkError);
+      }
     }
 
     // Si es un error de validación de Sequelize
@@ -158,6 +186,7 @@ export const crearLibro = async (req, res) => {
       success: false,
       message: "Error al crear el libro",
       error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

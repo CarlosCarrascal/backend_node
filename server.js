@@ -24,9 +24,26 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuramos las opciones de CORS para permitir acceso desde el frontend en el puerto 5173 y 8080
+// Configuramos las opciones de CORS para permitir acceso desde el frontend
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:8080",
+  process.env.FRONTEND_URL, // URL del frontend en producción desde variables de entorno
+].filter(Boolean); // Eliminar valores undefined o null
+
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:8080"],
+  origin: function (origin, callback) {
+    // Permitir requests sin origen (como mobile apps o curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true, // Permitir cookies/credenciales
 };
 
 // Middlewares
