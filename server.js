@@ -20,6 +20,7 @@ const __dirname = path.dirname(__filename);
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:8080",
+  "https://carloscarrascal.github.io",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
