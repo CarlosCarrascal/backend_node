@@ -1,11 +1,7 @@
 import db from "../models/index.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import cloudinary from "../config/cloudinary.config.js";
 
 const { libro: Libro, autor: Autor } = db;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export const listarLibros = async (req, res) => {
   try {
@@ -74,9 +70,10 @@ export const crearLibro = async (req, res) => {
     const { titulo, anio, id_autor } = req.body;
 
     if (!titulo || !anio || !id_autor) {
-      if (req.file) {
+      // Si hay un archivo subido a Cloudinary, eliminarlo
+      if (req.file?.filename) {
         try {
-          fs.unlinkSync(req.file.path);
+          await cloudinary.uploader.destroy(req.file.filename);
         } catch (unlinkError) {}
       }
       return res.status(400).json({
@@ -87,9 +84,10 @@ export const crearLibro = async (req, res) => {
 
     const autor = await Autor.findByPk(id_autor);
     if (!autor) {
-      if (req.file) {
+      // Si hay un archivo subido a Cloudinary, eliminarlo
+      if (req.file?.filename) {
         try {
-          fs.unlinkSync(req.file.path);
+          await cloudinary.uploader.destroy(req.file.filename);
         } catch (unlinkError) {}
       }
       return res.status(404).json({
@@ -98,7 +96,8 @@ export const crearLibro = async (req, res) => {
       });
     }
 
-    const portada = req.file ? req.file.filename : null;
+    // Cloudinary devuelve la URL completa en req.file.path
+    const portada = req.file ? req.file.path : null;
 
     const nuevoLibro = await Libro.create({
       titulo,
@@ -123,9 +122,10 @@ export const crearLibro = async (req, res) => {
       message: "Libro creado exitosamente",
     });
   } catch (error) {
-    if (req.file) {
+    // Si hay un archivo subido a Cloudinary, eliminarlo
+    if (req.file?.filename) {
       try {
-        fs.unlinkSync(req.file.path);
+        await cloudinary.uploader.destroy(req.file.filename);
       } catch (unlinkError) {}
     }
 
@@ -154,7 +154,11 @@ export const editarLibro = async (req, res) => {
     const libro = await Libro.findByPk(id);
 
     if (!libro) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file?.filename) {
+        try {
+          await cloudinary.uploader.destroy(req.file.filename);
+        } catch (unlinkError) {}
+      }
       return res.status(404).json({
         success: false,
         message: "Libro no encontrado",
@@ -162,7 +166,11 @@ export const editarLibro = async (req, res) => {
     }
 
     if (!titulo || !anio || !id_autor) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file?.filename) {
+        try {
+          await cloudinary.uploader.destroy(req.file.filename);
+        } catch (unlinkError) {}
+      }
       return res.status(400).json({
         success: false,
         message: "Los campos título, año e id_autor son obligatorios",
@@ -171,7 +179,11 @@ export const editarLibro = async (req, res) => {
 
     const autor = await Autor.findByPk(id_autor);
     if (!autor) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file?.filename) {
+        try {
+          await cloudinary.uploader.destroy(req.file.filename);
+        } catch (unlinkError) {}
+      }
       return res.status(404).json({
         success: false,
         message: "El autor especificado no existe",
@@ -180,22 +192,34 @@ export const editarLibro = async (req, res) => {
 
     let nuevaPortada = libro.portada;
     
+    // Si se solicita eliminar la imagen
     if (req.body.removeImage === 'true' && libro.portada) {
-      const oldImagePath = path.join(__dirname, "../../uploads/", libro.portada);
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
+      // Extraer public_id de la URL de Cloudinary
+      const publicId = extractPublicIdFromUrl(libro.portada);
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.error("Error al eliminar imagen de Cloudinary:", error);
+        }
       }
       nuevaPortada = null;
     }
     
+    // Si se sube una nueva imagen
     if (req.file) {
+      // Eliminar la imagen anterior de Cloudinary si existe
       if (libro.portada) {
-        const oldImagePath = path.join(__dirname, "../../uploads/", libro.portada);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
+        const publicId = extractPublicIdFromUrl(libro.portada);
+        if (publicId) {
+          try {
+            await cloudinary.uploader.destroy(publicId);
+          } catch (error) {
+            console.error("Error al eliminar imagen anterior de Cloudinary:", error);
+          }
         }
       }
-      nuevaPortada = req.file.filename;
+      nuevaPortada = req.file.path; // URL de Cloudinary
     }
 
     await libro.update({
@@ -221,7 +245,11 @@ export const editarLibro = async (req, res) => {
       message: "Libro actualizado exitosamente",
     });
   } catch (error) {
-    if (req.file) fs.unlinkSync(req.file.path);
+    if (req.file?.filename) {
+      try {
+        await cloudinary.uploader.destroy(req.file.filename);
+      } catch (unlinkError) {}
+    }
 
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
@@ -251,10 +279,15 @@ export const eliminarLibro = async (req, res) => {
       });
     }
 
+    // Eliminar imagen de Cloudinary si existe
     if (libro.portada) {
-      const imagePath = path.join(__dirname, "../../uploads/", libro.portada);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+      const publicId = extractPublicIdFromUrl(libro.portada);
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.error("Error al eliminar imagen de Cloudinary:", error);
+        }
       }
     }
 
@@ -272,5 +305,18 @@ export const eliminarLibro = async (req, res) => {
     });
   }
 };
+
+// Función auxiliar para extraer el public_id de una URL de Cloudinary
+function extractPublicIdFromUrl(url) {
+  try {
+    // Ejemplo de URL: https://res.cloudinary.com/CLOUD_NAME/image/upload/v1234567890/biblioteca-libros/abc123.jpg
+    // Necesitamos extraer: biblioteca-libros/abc123
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+    return match ? match[1] : null;
+  } catch (error) {
+    console.error("Error al extraer public_id:", error);
+    return null;
+  }
+}
 
 

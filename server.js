@@ -54,6 +54,15 @@ app.get("/", (req, res) => {
   });
 });
 
+// Endpoint de keep-alive para evitar que el servidor se duerma
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ 
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/autores", autorRoutes);
 app.use("/api/libros", libroRoutes);

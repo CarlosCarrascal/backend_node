@@ -13,3 +13,9 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         value: https://tu-frontend-domain.com  # IMPORTANTE: Actualizar con la URL real del frontend en producción
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dho4a194o
+      - key: CLOUDINARY_API_KEY
+        value: 746291463377762
+      - key: CLOUDINARY_API_SECRET
+        value: WewB1YaHQtF5TjRz3QwOS9k45zM
