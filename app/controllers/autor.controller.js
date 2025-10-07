@@ -1,12 +1,7 @@
-// app/controllers/autor.controller.js
-
 import db from "../models/index.js";
 
 const { autor: Autor, libro: Libro } = db;
 
-/**
- * Listar todos los autores con sus libros
- */
 export const listarAutores = async (req, res) => {
   try {
     const autores = await Autor.findAll({
@@ -34,9 +29,6 @@ export const listarAutores = async (req, res) => {
   }
 };
 
-/**
- * Obtener un autor por ID con sus libros
- */
 export const obtenerAutor = async (req, res) => {
   try {
     const { id } = req.params;
@@ -72,14 +64,10 @@ export const obtenerAutor = async (req, res) => {
   }
 };
 
-/**
- * Crear un nuevo autor
- */
 export const crearAutor = async (req, res) => {
   try {
     const { nombre, pais } = req.body;
 
-    // Validación de campos obligatorios
     if (!nombre || !pais) {
       return res.status(400).json({
         success: false,
@@ -98,7 +86,6 @@ export const crearAutor = async (req, res) => {
       message: "Autor creado exitosamente",
     });
   } catch (error) {
-    // Si es un error de validación de Sequelize
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
@@ -115,9 +102,6 @@ export const crearAutor = async (req, res) => {
   }
 };
 
-/**
- * Editar un autor existente
- */
 export const editarAutor = async (req, res) => {
   try {
     const { id } = req.params;
@@ -132,7 +116,6 @@ export const editarAutor = async (req, res) => {
       });
     }
 
-    // Validación de campos obligatorios
     if (!nombre || !pais) {
       return res.status(400).json({
         success: false,
@@ -151,7 +134,6 @@ export const editarAutor = async (req, res) => {
       message: "Autor actualizado exitosamente",
     });
   } catch (error) {
-    // Si es un error de validación de Sequelize
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
@@ -168,9 +150,6 @@ export const editarAutor = async (req, res) => {
   }
 };
 
-/**
- * Eliminar un autor
- */
 export const eliminarAutor = async (req, res) => {
   try {
     const { id } = req.params;
@@ -186,7 +165,6 @@ export const eliminarAutor = async (req, res) => {
       });
     }
 
-    // Verificar si el autor tiene libros asociados
     if (autor.libros && autor.libros.length > 0) {
       return res.status(400).json({
         success: false,

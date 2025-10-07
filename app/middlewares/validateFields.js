@@ -1,8 +1,3 @@
-// app/middlewares/validateFields.js
-
-/**
- * Middleware para validar campos obligatorios en autores
- */
 export const validateAutor = (req, res, next) => {
   const { nombre, pais } = req.body;
 
@@ -43,9 +38,6 @@ export const validateAutor = (req, res, next) => {
   next();
 };
 
-/**
- * Middleware para validar campos obligatorios en libros
- */
 export const validateLibro = (req, res, next) => {
   const { titulo, anio, id_autor } = req.body;
 

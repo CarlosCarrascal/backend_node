@@ -12,7 +12,7 @@ if (process.env.DATABASE_URL) {
     HOST: url.hostname,
     USER: url.username,
     PASSWORD: url.password,
-    DB: url.pathname.slice(1), // Remover el '/' inicial
+    DB: url.pathname.slice(1), 
     PORT: url.port || 3306,
     dialect: "mysql",
     pool: {

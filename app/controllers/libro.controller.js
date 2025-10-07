@@ -1,19 +1,12 @@
-// app/controllers/libro.controller.js
-
 import db from "../models/index.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const { libro: Libro, autor: Autor } = db;
-
-// Obtener __dirname en módulos ES6
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Listar todos los libros con información del autor
- */
 export const listarLibros = async (req, res) => {
   try {
     const libros = await Libro.findAll({
@@ -41,9 +34,6 @@ export const listarLibros = async (req, res) => {
   }
 };
 
-/**
- * Obtener un libro por ID con información del autor
- */
 export const obtenerLibro = async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,62 +69,36 @@ export const obtenerLibro = async (req, res) => {
   }
 };
 
-/**
- * Crear un nuevo libro con imagen de portada opcional
- */
 export const crearLibro = async (req, res) => {
   try {
     const { titulo, anio, id_autor } = req.body;
 
-    // Log para debugging
-    console.log("📝 Creando libro:", { titulo, anio, id_autor, hasFile: !!req.file });
-
-    // Validación de campos obligatorios
     if (!titulo || !anio || !id_autor) {
-      // Si se subió un archivo pero hay error, eliminarlo
       if (req.file) {
         try {
           fs.unlinkSync(req.file.path);
-        } catch (unlinkError) {
-          console.error("Error al eliminar archivo:", unlinkError);
-        }
+        } catch (unlinkError) {}
       }
-
       return res.status(400).json({
         success: false,
         message: "Los campos título, año e id_autor son obligatorios",
       });
     }
 
-    // Verificar que el autor existe
     const autor = await Autor.findByPk(id_autor);
     if (!autor) {
-      // Si se subió un archivo pero el autor no existe, eliminarlo
       if (req.file) {
         try {
           fs.unlinkSync(req.file.path);
-        } catch (unlinkError) {
-          console.error("Error al eliminar archivo:", unlinkError);
-        }
+        } catch (unlinkError) {}
       }
-
       return res.status(404).json({
         success: false,
         message: "El autor especificado no existe",
       });
     }
 
-    // Obtener el nombre del archivo si se subió una imagen
     const portada = req.file ? req.file.filename : null;
-    
-    if (req.file) {
-      console.log("📷 Archivo subido:", {
-        filename: req.file.filename,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-        path: req.file.path
-      });
-    }
 
     const nuevoLibro = await Libro.create({
       titulo,
@@ -143,7 +107,6 @@ export const crearLibro = async (req, res) => {
       id_autor: parseInt(id_autor),
     });
 
-    // Obtener el libro completo con el autor
     const libroCompleto = await Libro.findByPk(nuevoLibro.id_libro, {
       include: [
         {
@@ -154,26 +117,18 @@ export const crearLibro = async (req, res) => {
       ],
     });
 
-    console.log("✅ Libro creado exitosamente:", nuevoLibro.id_libro);
-
     res.status(201).json({
       success: true,
       data: libroCompleto,
       message: "Libro creado exitosamente",
     });
   } catch (error) {
-    console.error("❌ Error al crear libro:", error);
-    
-    // Si hay error y se subió un archivo, eliminarlo
     if (req.file) {
       try {
         fs.unlinkSync(req.file.path);
-      } catch (unlinkError) {
-        console.error("Error al eliminar archivo tras error:", unlinkError);
-      }
+      } catch (unlinkError) {}
     }
 
-    // Si es un error de validación de Sequelize
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
@@ -191,9 +146,6 @@ export const crearLibro = async (req, res) => {
   }
 };
 
-/**
- * Editar un libro existente con opción de cambiar la imagen
- */
 export const editarLibro = async (req, res) => {
   try {
     const { id } = req.params;
@@ -202,48 +154,32 @@ export const editarLibro = async (req, res) => {
     const libro = await Libro.findByPk(id);
 
     if (!libro) {
-      // Si se subió un archivo pero el libro no existe, eliminarlo
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-
+      if (req.file) fs.unlinkSync(req.file.path);
       return res.status(404).json({
         success: false,
         message: "Libro no encontrado",
       });
     }
 
-    // Validación de campos obligatorios
     if (!titulo || !anio || !id_autor) {
-      // Si se subió un archivo pero hay error, eliminarlo
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-
+      if (req.file) fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
         message: "Los campos título, año e id_autor son obligatorios",
       });
     }
 
-    // Verificar que el autor existe
     const autor = await Autor.findByPk(id_autor);
     if (!autor) {
-      // Si se subió un archivo pero el autor no existe, eliminarlo
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-
+      if (req.file) fs.unlinkSync(req.file.path);
       return res.status(404).json({
         success: false,
         message: "El autor especificado no existe",
       });
     }
 
-    // Manejar la imagen
-    let nuevaPortada = libro.portada; // Mantener la actual por defecto
+    let nuevaPortada = libro.portada;
     
-    // Si se solicita eliminar la imagen (removeImage=true en body)
     if (req.body.removeImage === 'true' && libro.portada) {
       const oldImagePath = path.join(__dirname, "../../uploads/", libro.portada);
       if (fs.existsSync(oldImagePath)) {
@@ -252,7 +188,6 @@ export const editarLibro = async (req, res) => {
       nuevaPortada = null;
     }
     
-    // Si se sube una nueva imagen, eliminar la anterior y usar la nueva
     if (req.file) {
       if (libro.portada) {
         const oldImagePath = path.join(__dirname, "../../uploads/", libro.portada);
@@ -263,7 +198,6 @@ export const editarLibro = async (req, res) => {
       nuevaPortada = req.file.filename;
     }
 
-    // Actualizar el libro
     await libro.update({
       titulo,
       anio: parseInt(anio),
@@ -271,7 +205,6 @@ export const editarLibro = async (req, res) => {
       id_autor: parseInt(id_autor),
     });
 
-    // Obtener el libro actualizado con el autor
     const libroActualizado = await Libro.findByPk(id, {
       include: [
         {
@@ -288,12 +221,8 @@ export const editarLibro = async (req, res) => {
       message: "Libro actualizado exitosamente",
     });
   } catch (error) {
-    // Si hay error y se subió un archivo, eliminarlo
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
+    if (req.file) fs.unlinkSync(req.file.path);
 
-    // Si es un error de validación de Sequelize
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
@@ -310,13 +239,9 @@ export const editarLibro = async (req, res) => {
   }
 };
 
-/**
- * Eliminar un libro y su imagen de portada
- */
 export const eliminarLibro = async (req, res) => {
   try {
     const { id } = req.params;
-
     const libro = await Libro.findByPk(id);
 
     if (!libro) {
@@ -326,7 +251,6 @@ export const eliminarLibro = async (req, res) => {
       });
     }
 
-    // Eliminar la imagen de portada si existe
     if (libro.portada) {
       const imagePath = path.join(__dirname, "../../uploads/", libro.portada);
       if (fs.existsSync(imagePath)) {
